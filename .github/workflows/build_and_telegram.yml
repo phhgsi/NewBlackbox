@@ -4,7 +4,12 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-and-send:
@@ -164,4 +169,19 @@ jobs:
               fi
             fi
           done
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v4.0.0' }}
+          name: "BlackBox v4.0.0 - WebView ERR_CACHE_MISS Fix"
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
+          files: |
+            ./app/build/outputs/apk/release/*.apk
+            ./app/build/outputs/apk/debug/*.apk
+            ./Bcore/build/outputs/aar/*.aar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
