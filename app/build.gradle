@@ -36,14 +36,14 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_21
-        targetCompatibility JavaVersion.VERSION_21
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     buildFeatures {
         viewBinding true
     }
     kotlinOptions {
-        jvmTarget = '21'
+        jvmTarget = '17'
     }
     packaging {
         jniLibs {
@@ -61,7 +61,7 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: "libs", include: ["*.jar", "*.aar"])
+    implementation fileTree(dir: "libs", include: ["*.jar", "*.aar"], exclude: ["StateView*.aar"])
     implementation project(':Bcore')
 
     implementation libs.appcompat
@@ -85,7 +85,7 @@ dependencies {
     
     implementation 'com.github.Othershe:CornerLabelView:1.0.0'
     
-//    implementation 'com.github.nukc.stateview:kotlin:2.2.0'
+    implementation 'com.github.nukc:StateView:v3.0.2'
     
     implementation 'com.github.Ferfalk:SimpleSearchView:0.2.0'
     implementation 'com.tbuonomo:dotsindicator:4.2'

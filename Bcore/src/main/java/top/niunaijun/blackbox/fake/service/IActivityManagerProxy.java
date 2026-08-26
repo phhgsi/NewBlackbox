@@ -784,13 +784,16 @@ public class IActivityManagerProxy extends ClassInvocationStub {
                 return PackageManager.PERMISSION_GRANTED;
             }
             
-            
+            if (isNetworkPermission(permission)) {
+                Slog.d(TAG, "ActivityManager checkPermission: Granting network permission: " + permission);
+                return PackageManager.PERMISSION_GRANTED;
+            }
+
             if (isAudioPermission(permission)) {
                 Slog.d(TAG, "ActivityManager checkPermission: Granting audio permission: " + permission);
                 return PackageManager.PERMISSION_GRANTED;
             }
 
-            
             if (isStorageOrMediaPermission(permission)) {
                 Slog.d(TAG, "ActivityManager checkPermission: Granting storage/media permission: " + permission);
                 return PackageManager.PERMISSION_GRANTED;
@@ -798,6 +801,16 @@ public class IActivityManagerProxy extends ClassInvocationStub {
             
             return method.invoke(who, args);
         }
+    }
+
+    private static boolean isNetworkPermission(String permission) {
+        if (permission == null) return false;
+        return permission.equals(Manifest.permission.INTERNET)
+                || permission.equals(Manifest.permission.ACCESS_NETWORK_STATE)
+                || permission.equals(Manifest.permission.ACCESS_WIFI_STATE)
+                || permission.equals(Manifest.permission.CHANGE_NETWORK_STATE)
+                || permission.equals(Manifest.permission.CHANGE_WIFI_STATE)
+                || permission.equals("android.permission.ACCESS_NETWORK_CONDITIONS");
     }
 
     

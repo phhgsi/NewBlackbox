@@ -81,6 +81,7 @@ public class IPackageManagerProxy extends BinderInvocationStub {
         addMethodHook(new ValueMethodProxy("removeOnPermissionsChangeListener", 0));
         addMethodHook(new SimpleAudioPermissionHook());
         addMethodHook(new CheckSelfPermission());
+        addMethodHook(new CheckUidPermission());
         addMethodHook(new ShouldShowRequestPermissionRationale());
         addMethodHook(new RequestPermissions());
         addMethodHook(new DisableIconLoading());
@@ -415,24 +416,25 @@ public class IPackageManagerProxy extends BinderInvocationStub {
             String permission = (String) args[0];
             String packageName = (String) args[1];
             
-            
+            if (isNetworkPermission(permission)) {
+                Slog.d(TAG, "SimpleAudioPermissionHook: Granting network permission: " + permission + " to " + packageName);
+                return PackageManager.PERMISSION_GRANTED;
+            }
+
             if (isAudioPermission(permission)) {
                 Slog.d(TAG, "SimpleAudioPermissionHook: Granting audio permission: " + permission + " to " + packageName);
                 return PackageManager.PERMISSION_GRANTED;
             }
 
-            
             if (isStorageOrMediaPermission(permission)) {
                 Slog.d(TAG, "SimpleAudioPermissionHook: Granting storage/media permission: " + permission + " to " + packageName);
                 return PackageManager.PERMISSION_GRANTED;
             }
             
-            
             if (isNotificationOrXiaomiPermission(permission)) {
                 Slog.d(TAG, "SimpleAudioPermissionHook: Granting notification/Xiaomi permission: " + permission + " to " + packageName);
                 return PackageManager.PERMISSION_GRANTED;
             }
-            
             
             return method.invoke(who, args);
         }
@@ -445,25 +447,42 @@ public class IPackageManagerProxy extends BinderInvocationStub {
             String permission = (String) args[0];
             String packageName = (String) args[1];
             
-            
+            if (isNetworkPermission(permission)) {
+                Slog.d(TAG, "CheckSelfPermission: Granting network permission: " + permission + " to " + packageName);
+                return PackageManager.PERMISSION_GRANTED;
+            }
+
             if (isAudioPermission(permission)) {
                 Slog.d(TAG, "CheckSelfPermission: Granting audio permission: " + permission + " to " + packageName);
                 return PackageManager.PERMISSION_GRANTED;
             }
 
-            
             if (isStorageOrMediaPermission(permission)) {
                 Slog.d(TAG, "CheckSelfPermission: Granting storage/media permission: " + permission + " to " + packageName);
                 return PackageManager.PERMISSION_GRANTED;
             }
-            
             
             if (isNotificationOrXiaomiPermission(permission)) {
                 Slog.d(TAG, "CheckSelfPermission: Granting notification/Xiaomi permission: " + permission + " to " + packageName);
                 return PackageManager.PERMISSION_GRANTED;
             }
             
-            
+            return method.invoke(who, args);
+        }
+    }
+
+    @ProxyMethod("checkUidPermission")
+    public static class CheckUidPermission extends MethodHook {
+        @Override
+        protected Object hook(Object who, Method method, Object[] args) throws Throwable {
+            String permission = (String) args[0];
+            if (isNetworkPermission(permission)
+                    || isAudioPermission(permission)
+                    || isStorageOrMediaPermission(permission)
+                    || isNotificationOrXiaomiPermission(permission)) {
+                return PackageManager.PERMISSION_GRANTED;
+            }
+            MethodParameterUtils.replaceLastUid(args);
             return method.invoke(who, args);
         }
     }
@@ -475,24 +494,24 @@ public class IPackageManagerProxy extends BinderInvocationStub {
             String permission = (String) args[0];
             String packageName = (String) args[1];
             
-            
+            if (isNetworkPermission(permission)) {
+                return false;
+            }
+
             if (isAudioPermission(permission)) {
                 Slog.d(TAG, "ShouldShowRequestPermissionRationale: Not showing rationale for audio permission: " + permission);
                 return false;
             }
 
-            
             if (isStorageOrMediaPermission(permission)) {
                 Slog.d(TAG, "ShouldShowRequestPermissionRationale: Not showing rationale for storage/media permission: " + permission);
                 return false;
             }
             
-            
             if (isNotificationOrXiaomiPermission(permission)) {
                 Slog.d(TAG, "ShouldShowRequestPermissionRationale: Not showing rationale for notification/Xiaomi permission: " + permission);
                 return false;
             }
-            
             
             return method.invoke(who, args);
         }
@@ -504,8 +523,6 @@ public class IPackageManagerProxy extends BinderInvocationStub {
         protected Object hook(Object who, Method method, Object[] args) throws Throwable {
             String[] permissions = (String[]) args[0];
             String packageName = (String) args[1];
-            
-            
             
             if (permissions != null) {
                 Slog.d(TAG, "RequestPermissions: Allowing permission request flow for: " + java.util.Arrays.toString(permissions));
@@ -519,13 +536,21 @@ public class IPackageManagerProxy extends BinderInvocationStub {
     public static class DisableIconLoading extends MethodHook {
         @Override
         protected Object hook(Object who, Method method, Object[] args) throws Throwable {
-            
             Slog.d(TAG, "Blocking icon loading to prevent resource errors");
             return null; 
         }
     }
 
-    
+    private static boolean isNetworkPermission(String permission) {
+        if (permission == null) return false;
+        return permission.equals(android.Manifest.permission.INTERNET)
+                || permission.equals(android.Manifest.permission.ACCESS_NETWORK_STATE)
+                || permission.equals(android.Manifest.permission.ACCESS_WIFI_STATE)
+                || permission.equals(android.Manifest.permission.CHANGE_NETWORK_STATE)
+                || permission.equals(android.Manifest.permission.CHANGE_WIFI_STATE)
+                || permission.equals("android.permission.ACCESS_NETWORK_CONDITIONS");
+    }
+
     private static boolean isStorageOrMediaPermission(String permission) {
         if (permission == null) return false;
         
@@ -553,7 +578,6 @@ public class IPackageManagerProxy extends BinderInvocationStub {
         return false;
     }
 
-    
     private static boolean isAudioPermission(String permission) {
         if (permission == null) return false;
         return permission.equals(android.Manifest.permission.RECORD_AUDIO)
@@ -571,15 +595,12 @@ public class IPackageManagerProxy extends BinderInvocationStub {
                 || permission.equals("android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE");
     }
     
-    
     private static boolean isNotificationOrXiaomiPermission(String permission) {
         if (permission == null) return false;
-        
         
         if (permission.equals("android.permission.POST_NOTIFICATIONS")) {
             return true;
         }
-        
         
         if (permission.equals("miui.permission.USE_INTERNAL_GENERAL_API") ||
             permission.equals("miui.permission.OPTIMIZE_POWER") ||

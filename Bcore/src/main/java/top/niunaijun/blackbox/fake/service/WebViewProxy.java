@@ -199,7 +199,10 @@ public class WebViewProxy extends ClassInvocationStub {
                     Context context = BlackBoxCore.getContext();
                     String packageName = context != null ? context.getPackageName() : "unknown";
                     String userId = String.valueOf(BActivityThread.getUserId());
-                    String uniqueSuffix = suffix + "_" + userId + "_" + android.os.Process.myPid();
+                    String uniqueSuffix = (suffix + "_" + userId + "_" + android.os.Process.myPid())
+                            .replace(":", "_")
+                            .replace("/", "_")
+                            .replace("\\", "_");
                     args[0] = uniqueSuffix;
                     Slog.d(TAG, "WebView: Using unique suffix: " + uniqueSuffix);
                 }

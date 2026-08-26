@@ -1,6 +1,38 @@
 # Release Notes - NewBlackbox
 
-## Version: Latest Build (2026-01-31)
+## Version: Latest Build (2026-08-26)
+
+---
+
+### Bug Fixes
+
+#### WebView & Web-Based Apps `ERR_CACHE_MISS` Fix
+**Problem:** Web-based apps and websites opened inside BlackBox failed to load with `net::ERR_CACHE_MISS`, while working properly when installed directly on Android.
+
+**Root Causes:**
+1. Chromium WebView's permission checks via `PackageManager.checkPermission()` and `checkSelfPermission()` were forwarded to the host OS package manager, which returned `PERMISSION_DENIED` for virtual package names, forcing Chromium into offline/cache-only mode.
+2. Host `AndroidManifest.xml` was missing network permission declarations.
+3. Colon `:` characters in `WebView.setDataDirectorySuffix()` corrupted data directories on Android 9+.
+4. ConnectivityManager calls failed due to unsanitized virtual UIDs.
+
+**Solution:**
+- Added `isNetworkPermission` interception in `IPackageManagerProxy` and `IActivityManagerProxy` to automatically grant network permissions to virtual apps.
+- Added `checkUidPermission` hook in `IPackageManagerProxy`.
+- Added network permissions (`INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, etc.) to host `app/src/main/AndroidManifest.xml`.
+- Sanitized `setDataDirectorySuffix` in `BActivityThread.java` and `WebViewProxy.java` with safe characters.
+- Mapped virtual UID to host process UID in `IConnectivityManagerProxy.java`.
+
+**Files Changed:**
+- `app/src/main/AndroidManifest.xml`
+- `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/IPackageManagerProxy.java`
+- `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/IActivityManagerProxy.java`
+- `Bcore/src/main/java/top/niunaijun/blackbox/app/BActivityThread.java`
+- `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/IConnectivityManagerProxy.java`
+- `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/WebViewProxy.java`
+
+---
+
+## Version: Build (2026-01-31)
 
 ---
 

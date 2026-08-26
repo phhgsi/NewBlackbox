@@ -389,7 +389,15 @@ public class BActivityThread extends IBActivityThread.Stub {
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            WebView.setDataDirectorySuffix(getUserId() + ":" + packageName + ":" + processName);
+            String safeSuffix = (getUserId() + "_" + packageName + "_" + processName)
+                    .replace(":", "_")
+                    .replace("/", "_")
+                    .replace("\\", "_");
+            try {
+                WebView.setDataDirectorySuffix(safeSuffix);
+            } catch (Throwable t) {
+                Slog.w(TAG, "Failed to set WebView data directory suffix: " + t.getMessage());
+            }
         }
 
         VirtualRuntime.setupRuntime(processName, applicationInfo);
