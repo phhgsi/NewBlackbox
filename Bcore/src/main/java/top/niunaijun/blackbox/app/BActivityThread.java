@@ -388,18 +388,6 @@ public class BActivityThread extends IBActivityThread.Stub {
                 StrictModeCompat.disableDeathOnFileUriExposure();
             }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            String safeSuffix = (getUserId() + "_" + packageName + "_" + processName)
-                    .replace(":", "_")
-                    .replace("/", "_")
-                    .replace("\\", "_");
-            try {
-                WebView.setDataDirectorySuffix(safeSuffix);
-            } catch (Throwable t) {
-                Slog.w(TAG, "Failed to set WebView data directory suffix: " + t.getMessage());
-            }
-        }
-
         VirtualRuntime.setupRuntime(processName, applicationInfo);
 
         BRVMRuntime.get(BRVMRuntime.get().getRuntime()).setTargetSdkVersion(applicationInfo.targetSdkVersion);
@@ -410,6 +398,18 @@ public class BActivityThread extends IBActivityThread.Stub {
         NativeCore.init(Build.VERSION.SDK_INT);
         assert packageContext != null;
         IOCore.get().enableRedirect(packageContext);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            String safeSuffix = (getUserId() + "_" + processName)
+                    .replace(":", "_")
+                    .replace("/", "_")
+                    .replace("\\", "_");
+            try {
+                WebView.setDataDirectorySuffix(safeSuffix);
+            } catch (Throwable t) {
+                Slog.w(TAG, "Failed to set WebView data directory suffix: " + t.getMessage());
+            }
+        }
 
         AppBindData bindData = new AppBindData();
         bindData.appInfo = applicationInfo;

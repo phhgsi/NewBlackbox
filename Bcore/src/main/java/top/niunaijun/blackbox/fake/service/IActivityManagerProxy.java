@@ -440,9 +440,7 @@ public class IActivityManagerProxy extends ClassInvocationStub {
     public static class BindIsolatedService extends MethodHook {
         @Override
         protected Object hook(Object who, Method method, Object[] args) throws Throwable {
-            
-            args[6] = null;
-            return BindServiceCommon(who,method,args,7);
+            return BindServiceCommon(who, method, args, 7);
         }
 
         @Override

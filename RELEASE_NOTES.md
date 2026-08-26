@@ -1,34 +1,43 @@
 # Release Notes - NewBlackbox
 
-## Version: Latest Build (2026-08-26)
+## Version: v4.0.1 - Comprehensive WebView & Network Fix (2026-08-26)
 
 ---
 
 ### Bug Fixes
 
-#### WebView & Web-Based Apps `ERR_CACHE_MISS` Fix
+#### WebView & Web-Based Apps `ERR_CACHE_MISS` Comprehensive Fix
 **Problem:** Web-based apps and websites opened inside BlackBox failed to load with `net::ERR_CACHE_MISS`, while working properly when installed directly on Android.
 
-**Root Causes:**
-1. Chromium WebView's permission checks via `PackageManager.checkPermission()` and `checkSelfPermission()` were forwarded to the host OS package manager, which returned `PERMISSION_DENIED` for virtual package names, forcing Chromium into offline/cache-only mode.
-2. Host `AndroidManifest.xml` was missing network permission declarations.
-3. Colon `:` characters in `WebView.setDataDirectorySuffix()` corrupted data directories on Android 9+.
-4. ConnectivityManager calls failed due to unsanitized virtual UIDs.
-
-**Solution:**
-- Added `isNetworkPermission` interception in `IPackageManagerProxy` and `IActivityManagerProxy` to automatically grant network permissions to virtual apps.
-- Added `checkUidPermission` hook in `IPackageManagerProxy`.
-- Added network permissions (`INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, etc.) to host `app/src/main/AndroidManifest.xml`.
-- Sanitized `setDataDirectorySuffix` in `BActivityThread.java` and `WebViewProxy.java` with safe characters.
-- Mapped virtual UID to host process UID in `IConnectivityManagerProxy.java`.
+**Root Causes & Solutions:**
+1. **Android 11+ Permission Manager Hooking (`IPermissionManagerProxy`):**
+   - On Android 11+ (API 30+), permissions are checked via `permissionmgr` (`IPermissionManager`), which was forwarding checks for virtual packages directly to the host OS and returning `PERMISSION_DENIED` (`-1`).
+   - *Fix:* Added `checkPermission`, `checkUidPermission`, and `isPermissionRevokedByPolicy` hooks to automatically grant network and runtime permissions (`INTERNET`, `ACCESS_NETWORK_STATE`, etc.) to sandboxed apps.
+2. **DNS Resolver Interception (`IDnsResolverProxy`):**
+   - `IDnsResolverProxy` was hijacking Android's `dnsresolver` system service and returning `null` / mock lists, breaking standard DNS resolution for WebView Chromium sockets.
+   - *Fix:* Removed `IDnsResolverProxy` hijacking to let sandboxed apps use standard Android DNS resolution.
+3. **Connectivity Manager Clean Delegation (`IConnectivityManagerProxy`):**
+   - `IConnectivityManagerProxy` was returning synthetic `Network(1)` objects and fake `LinkProperties`, causing `android_setsocknetwork` socket binding in Chromium to fail with invalid network IDs.
+   - *Fix:* Cleaned up `IConnectivityManagerProxy` to cleanly delegate all network queries and callbacks to the real system `ConnectivityManager`, while correctly mapping virtual UIDs to the host process UID for UID queries.
+4. **WebView Provider System Packages (`AppSystemEnv`):**
+   - Modern Android uses `com.android.chrome`, `com.google.android.trichromelibrary*`, and vendor-specific browsers (Samsung, Xiaomi, Vivo, Heytap) as WebView providers. `AppSystemEnv.isOpenPackage` did not include these packages, causing `PackageManager.getPackageInfo` to return `null` when WebView loaded its native libraries.
+   - *Fix:* Added all standard WebView providers, Trichrome libraries, and vendor WebView packages to `AppSystemEnv`.
+5. **WebView Sandboxed Renderer Service (`BindIsolatedService`):**
+   - `BindIsolatedService` in `IActivityManagerProxy` was wiping `args[6] = null`, corrupting the instance name required by Android ActivityManager to bind isolated WebView renderer processes.
+   - *Fix:* Preserved the isolated service `instanceName` intact.
+6. **WebView Data Directory Initialization Order (`BActivityThread`):**
+   - `WebView.setDataDirectorySuffix` was previously called before `IOCore.get().enableRedirect()`, creating data directories in inconsistent paths.
+   - *Fix:* Moved `setDataDirectorySuffix` to execute immediately after `IOCore.get().enableRedirect()`.
 
 **Files Changed:**
-- `app/src/main/AndroidManifest.xml`
-- `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/IPackageManagerProxy.java`
+- `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/IPermissionManagerProxy.java`
+- `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/IConnectivityManagerProxy.java`
+- `Bcore/src/main/java/top/niunaijun/blackbox/fake/hook/HookManager.java`
+- `Bcore/src/main/java/top/niunaijun/blackbox/core/env/AppSystemEnv.java`
 - `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/IActivityManagerProxy.java`
 - `Bcore/src/main/java/top/niunaijun/blackbox/app/BActivityThread.java`
-- `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/IConnectivityManagerProxy.java`
-- `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/WebViewProxy.java`
+- `app/src/main/AndroidManifest.xml`
+- `Bcore/src/main/java/top/niunaijun/blackbox/fake/service/IPackageManagerProxy.java`
 
 ---
 

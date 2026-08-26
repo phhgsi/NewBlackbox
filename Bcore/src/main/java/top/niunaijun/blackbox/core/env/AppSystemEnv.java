@@ -23,40 +23,37 @@ public class AppSystemEnv {
         sSystemPackages.add("com.google.android.webview.beta");
         sSystemPackages.add("com.google.android.webview.canary");
         sSystemPackages.add("com.android.webview");
+        sSystemPackages.add("com.android.chrome");
+        sSystemPackages.add("com.chrome.beta");
+        sSystemPackages.add("com.chrome.dev");
+        sSystemPackages.add("com.chrome.canary");
+        sSystemPackages.add("com.google.android.trichromelibrary");
+        sSystemPackages.add("org.chromium.webview_shell");
+        sSystemPackages.add("com.sec.android.app.sbrowser");
+        sSystemPackages.add("com.sec.android.app.sbrowser.beta");
+        sSystemPackages.add("com.vivo.browser");
+        sSystemPackages.add("com.heytap.browser");
+        sSystemPackages.add("com.mi.globalbrowser");
         sSystemPackages.add("com.android.camera");
         sSystemPackages.add("com.android.talkback");
         sSystemPackages.add("com.miui.gallery");
-
-        
         sSystemPackages.add("com.google.android.inputmethod.latin");
-        
-
-        
         sSystemPackages.add("com.huawei.webview");
-
-        
         sSystemPackages.add("com.coloros.safecenter");
 
-        
         sSuPackages.add("com.noshufou.android.su");
         sSuPackages.add("com.noshufou.android.su.elite");
         sSuPackages.add("eu.chainfire.supersu");
         sSuPackages.add("com.koushikdutta.superuser");
         sSuPackages.add("com.thirdparty.superuser");
         sSuPackages.add("com.yellowes.su");
-
-
-
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && Build.VERSION.SDK_INT < 29){
-            
-        }else{
-
-        }
     }
 
     public static boolean isOpenPackage(String packageName) {
-        return sSystemPackages.contains(packageName);
+        if (packageName == null) return false;
+        if (sSystemPackages.contains(packageName)) return true;
+        if (packageName.startsWith("com.google.android.trichromelibrary")) return true;
+        return false;
     }
 
     public static boolean isOpenPackage(ComponentName componentName) {
